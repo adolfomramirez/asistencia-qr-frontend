@@ -48,3 +48,11 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+3. Docker
+Tener instalado docker desktop
+
+4. comando
+docker-compose up --build
+
+5. Visualizacion en el puerto 8081
