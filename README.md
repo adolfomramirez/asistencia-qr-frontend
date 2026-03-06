@@ -56,3 +56,9 @@ Tener instalado docker desktop
 docker-compose up --build
 
 5. Visualizacion en el puerto 8081
+
+6. Generacion APK
+npm install -g eas-cli
+eas login (cuenta expo)
+eas build:configure
+eas build -p android --profile preview
