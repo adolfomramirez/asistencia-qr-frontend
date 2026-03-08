@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
 import { login } from "../services/authService";
 
 export default function LoginScreen() {
@@ -7,6 +8,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleLogin = async () => {
     setLoading(true);
@@ -15,6 +17,7 @@ export default function LoginScreen() {
       const res = await login(email, password);
       console.log("Sesión iniciada:", res);
       // Guardar token en SecureStore o AsyncStorage
+      router.replace("/(tabs)");
     } catch (err) {
       setError(err.message);
     } finally {
