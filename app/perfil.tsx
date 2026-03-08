@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useRouter } from "expo-router";
 import ProgressBar from "../components/ProgressBar";
-import { getUser } from "../services/authService";
+import { getUser, logout } from "../services/authService";
 import { getMyProfile } from "../services/profileService";
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -16,6 +17,12 @@ export default function PerfilScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
 
   useEffect(() => {
     getMyProfile()
@@ -68,6 +75,10 @@ export default function PerfilScreen() {
       {!loading && !profile && !error && (
         <Text style={styles.emptyText}>No tienes un perfil de estudiante asignado aún.</Text>
       )}
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Cerrar sesión</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -84,4 +95,6 @@ const styles = StyleSheet.create({
   historyItem: { fontSize: 14, color: "#333", marginBottom: 5 },
   emptyText: { fontSize: 14, color: "#999", marginTop: 20, textAlign: "center" },
   errorText: { fontSize: 14, color: "#FF3B30", marginTop: 10 },
+  logoutButton: { marginTop: 30, paddingVertical: 10, paddingHorizontal: 30, borderRadius: 8, borderWidth: 1, borderColor: "#FF3B30" },
+  logoutText: { color: "#FF3B30", fontSize: 15, fontWeight: "500" },
 });
