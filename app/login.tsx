@@ -17,7 +17,7 @@ export default function LoginScreen() {
       const res = await login(email, password);
       console.log("Sesión iniciada:", res);
       // Guardar token en SecureStore o AsyncStorage
-      router.replace("/(tabs)");
+      router.replace("/perfil");
     } catch (err) {
       setError(err.message);
     } finally {
