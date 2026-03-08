@@ -9,17 +9,28 @@ interface RequestOptions {
 }
 
 class ApiService {
-    private baseUrl: string = API_CONFIG.BASE_URL;
-    private apiKey: string = API_CONFIG.API_KEY;
+    private baseUrl: string = `${API_CONFIG.BASE_URL}/api`;
+    private token: string | null = null;
+
+    setToken(token: string): void {
+        this.token = token;
+    }
+
+    clearToken(): void {
+        this.token = null;
+    }
 
     private async request<T>(endpoint: string, options: RequestOptions): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        const headers = {
+        const headers: Record<string, string> = {
             'Content-Type': 'application/json',
-            'x-api-key': this.apiKey,
             ...options.headers,
         };
+
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
 
         const config: RequestInit = {
             method: options.method,
@@ -62,15 +73,13 @@ class ApiService {
     }
 
     /**
-     * Simple health check implementation
+     * Simple health check using the public /health endpoint (no auth required)
      */
     async checkConnection(): Promise<boolean> {
         try {
-            // The backend has a '/' route in 'src/index.ts' but it's not under '/api'
-            // The 'src/routes/index.ts' has a '/' route which would be '/api'
-            await this.get('/');
-            return true;
-        } catch (error) {
+            const response = await fetch(`${API_CONFIG.BASE_URL}/health`);
+            return response.ok;
+        } catch {
             return false;
         }
     }
