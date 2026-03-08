@@ -1,13 +1,21 @@
 import axios from "axios";
 import { API_URL } from "../config/api";
 
+let _token = null;
+let _user = null;
+
+export const getToken = () => _token;
+export const getUser = () => _user;
+
 export const login = async (email, password) => {
   try {
     const { data } = await axios.post(`${API_URL}/auth/login`, {
       login: email,
       password,
     });
-    return data; // Aquí recibes token o datos de sesión
+    _token = data.token;
+    _user = data.user;
+    return data;
   } catch (error) {
     if (error.response) {
       const status = error.response.status;
@@ -19,4 +27,9 @@ export const login = async (email, password) => {
     }
     throw new Error("No se pudo conectar al servidor. Verifica tu conexión.");
   }
+};
+
+export const logout = () => {
+  _token = null;
+  _user = null;
 };

@@ -1,10 +1,15 @@
 import React from "react";
 import { FlatList, Image, StyleSheet, Text, View } from "react-native";
 import ProgressBar from "../components/ProgressBar";
+import { getUser } from "../services/authService";
 
 export default function PerfilScreen() {
+  const backendUser = getUser();
+
   const user = {
-    name: "María González",
+    name: backendUser?.name || backendUser?.username || "Usuario",
+    email: backendUser?.email || "",
+    // Estos campos no existen aún en el backend — placeholders por implementar
     points: 245,
     level: "Plata",
     progress: 73,
@@ -23,6 +28,7 @@ export default function PerfilScreen() {
         style={styles.avatar}
       />
       <Text style={styles.name}>{user.name}</Text>
+      <Text style={styles.email}>{user.email}</Text>
       <Text style={styles.points}>{user.points} puntos</Text>
       <Text style={styles.level}>Nivel {user.level}</Text>
 
@@ -49,6 +55,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", padding: 20, backgroundColor: "#fff" },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 15 },
   name: { fontSize: 22, fontWeight: "bold" },
+  email: { fontSize: 14, color: "#888", marginTop: 2 },
   points: { fontSize: 16, marginTop: 5 },
   level: { fontSize: 18, color: "#007BFF", marginVertical: 5 },
   nextLevel: { fontSize: 14, color: "#555", marginBottom: 15 },
