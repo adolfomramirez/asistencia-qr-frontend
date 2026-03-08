@@ -1,25 +1,28 @@
-import React from "react";
-import { FlatList, Image, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import ProgressBar from "../components/ProgressBar";
 import { getUser } from "../services/authService";
+import { getMyProfile } from "../services/profileService";
+
+const LEVEL_LABELS: Record<string, string> = {
+  BRONZE: "Bronce",
+  SILVER: "Plata",
+  GOLD: "Oro",
+  DIAMOND: "Diamante",
+};
 
 export default function PerfilScreen() {
   const backendUser = getUser();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const user = {
-    name: backendUser?.name || backendUser?.username || "Usuario",
-    email: backendUser?.email || "",
-    // Estos campos no existen aún en el backend — placeholders por implementar
-    points: 245,
-    level: "Plata",
-    progress: 73,
-    nextLevelPoints: 55,
-    history: [
-      { id: 1, action: "Asistencia confirmada (Desarrollo Web)", points: "+5" },
-      { id: 2, action: "Racha de 7 días (Bonus)", points: "+10" },
-      { id: 3, action: "Asistencia temprana (Matemáticas)", points: "+3" },
-    ],
-  };
+  useEffect(() => {
+    getMyProfile()
+      .then(setProfile)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -27,26 +30,44 @@ export default function PerfilScreen() {
         source={{ uri: "https://via.placeholder.com/100" }}
         style={styles.avatar}
       />
-      <Text style={styles.name}>{user.name}</Text>
-      <Text style={styles.email}>{user.email}</Text>
-      <Text style={styles.points}>{user.points} puntos</Text>
-      <Text style={styles.level}>Nivel {user.level}</Text>
+      <Text style={styles.name}>{backendUser?.name || backendUser?.username || "Usuario"}</Text>
+      <Text style={styles.email}>{backendUser?.email || ""}</Text>
 
-      <ProgressBar progress={user.progress} />
-      <Text style={styles.nextLevel}>
-        {user.nextLevelPoints} puntos para Oro
-      </Text>
+      {loading && <ActivityIndicator style={{ marginTop: 20 }} color="#007BFF" />}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <Text style={styles.historyTitle}>Actividad Reciente</Text>
-      <FlatList
-        data={user.history}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <Text style={styles.historyItem}>
-            {item.action} {item.points}
+      {profile && (
+        <>
+          <Text style={styles.points}>{profile.points} puntos</Text>
+          <Text style={styles.level}>Nivel {LEVEL_LABELS[profile.level] || profile.level}</Text>
+
+          <ProgressBar progress={profile.progress} />
+          <Text style={styles.nextLevel}>
+            {profile.level === "DIAMOND"
+              ? "¡Nivel máximo alcanzado!"
+              : `${profile.pointsToNext} puntos para ${LEVEL_LABELS[profile.nextLevel]}`}
           </Text>
-        )}
-      />
+
+          <Text style={styles.historyTitle}>Actividad Reciente</Text>
+          <FlatList
+            data={profile.history}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <Text style={styles.historyItem}>
+                {item.reason}{" "}
+                <Text style={{ color: item.points.startsWith("+") ? "#4CD964" : "#FF3B30" }}>
+                  {item.points}
+                </Text>
+              </Text>
+            )}
+            ListEmptyComponent={<Text style={styles.emptyText}>Sin actividad reciente</Text>}
+          />
+        </>
+      )}
+
+      {!loading && !profile && !error && (
+        <Text style={styles.emptyText}>No tienes un perfil de estudiante asignado aún.</Text>
+      )}
     </View>
   );
 }
@@ -61,4 +82,6 @@ const styles = StyleSheet.create({
   nextLevel: { fontSize: 14, color: "#555", marginBottom: 15 },
   historyTitle: { fontSize: 18, fontWeight: "bold", marginTop: 20, marginBottom: 10 },
   historyItem: { fontSize: 14, color: "#333", marginBottom: 5 },
+  emptyText: { fontSize: 14, color: "#999", marginTop: 20, textAlign: "center" },
+  errorText: { fontSize: 14, color: "#FF3B30", marginTop: 10 },
 });
