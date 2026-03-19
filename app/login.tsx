@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
-import { login } from "../services/authService";
+import { Redirect, useRouter } from "expo-router";
+import { getToken, login } from "../services/authService";
 
 export default function LoginScreen() {
+  const token = getToken();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ export default function LoginScreen() {
       const res = await login(email, password);
       console.log("Sesión iniciada:", res);
       // Guardar token en SecureStore o AsyncStorage
-      router.replace("/perfil");
+      router.replace("/(tabs)");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -26,6 +27,10 @@ export default function LoginScreen() {
   };
 
   const isDisabled = !email || !password || loading;
+
+  if (token) {
+    return <Redirect href="/(tabs)" />;
+  }
 
   return (
     <View style={styles.container}>
