@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import ProgressBar from "../components/ProgressBar";
-import { getUser, logout } from "../services/authService";
+import { getToken, getUser, logout } from "../services/authService";
 import { getMyProfile } from "../services/profileService";
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -13,6 +13,7 @@ const LEVEL_LABELS: Record<string, string> = {
 };
 
 export default function PerfilScreen() {
+  const token = getToken();
   const backendUser = getUser();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -25,11 +26,20 @@ export default function PerfilScreen() {
   };
 
   useEffect(() => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     getMyProfile()
       .then(setProfile)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [token]);
+
+  if (!token) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <View style={styles.container}>
