@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { apiService } from '../../services/api.service';
 
 export default function Home() {
+  const router = useRouter();
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -53,6 +55,13 @@ export default function Home() {
         disabled={connectionStatus === 'loading'}
       >
         <Text style={styles.buttonText}>Reintentar Conexión</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.profileButton}
+        onPress={() => router.push('/(tabs)/perfil')}
+      >
+        <Text style={styles.profileButtonText}>Ir a mi perfil</Text>
       </TouchableOpacity>
     </View>
   );
@@ -109,6 +118,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  profileButton: {
+    marginTop: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  profileButtonText: {
+    color: '#007AFF',
     fontSize: 16,
     fontWeight: '500',
   },

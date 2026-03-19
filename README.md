@@ -1,9 +1,13 @@
-# Welcome to your Expo app 👋
+# Mi nombre es Ana Lucia Pérez
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Get atarted
 
-## Get started
+1. Git branch:
+   git clone https://github.com/AnaLucia134/asistencia-qr-frontend.git
 
+HEAD
+   git checkout ana-lucia
+=======
 1. Install dependencies
 
    ```bash
@@ -56,3 +60,10 @@ Tener instalado docker desktop
 docker-compose up --build
 
 5. Visualizacion en el puerto 8081
+
+6. Generacion APK
+npm install -g eas-cli
+eas login (cuenta expo)
+eas build:configure
+eas build -p android --profile preview
+ f22772ef73d20801cc5a79bfcdc6990b4988fe6c
