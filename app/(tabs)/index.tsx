@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { apiService } from '../../services/api.service';
 import HelloConnect from '../../components/HelloConnect';
 
 export default function Home() {
+  const router = useRouter();
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -112,6 +114,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  profileButton: {
+    marginTop: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  profileButtonText: {
+    color: '#007AFF',
     fontSize: 16,
     fontWeight: '500',
   },
