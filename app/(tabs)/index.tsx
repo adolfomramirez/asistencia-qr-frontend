@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { apiService } from '../../services/api.service';
+import HelloConnect from '../../components/HelloConnect';
 
 export default function Home() {
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -54,6 +55,8 @@ export default function Home() {
       >
         <Text style={styles.buttonText}>Reintentar Conexión</Text>
       </TouchableOpacity>
+
+      <HelloConnect />
     </View>
   );
 }
