@@ -72,6 +72,14 @@ class ApiService {
         return this.request<T>(endpoint, { method: 'DELETE', headers });
     }
 
+    async login(login: string, password: string): Promise<{ user: any; token: string }> {
+        const response = await this.post<{ user: any; token: string }>('/auth/login', { login, password });
+        if (response.token) {
+            this.setToken(response.token);
+        }
+        return response;
+    }
+
     /**
      * Simple health check using the public /health endpoint (no auth required)
      */

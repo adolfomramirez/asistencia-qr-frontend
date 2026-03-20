@@ -1,17 +1,37 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { apiService } from '../services/api.service';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: 'login',
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Simple authentication check placeholder
+    // In a real app, you'd check a secure store or global state
+    const inAuthGroup = segments[0] === 'login';
+
+    // If the user is not logged in and not in the login screen, redirect to login
+    // This is a basic implementation; a more robust one would use a proper AuthProvider
+    /*
+    if (!apiService.getToken() && !inAuthGroup) {
+      router.replace('/login');
+    } else if (apiService.getToken() && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+    */
+  }, [segments]);
 
   const navigationTheme =
     colorScheme === 'dark'
