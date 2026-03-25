@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { apiService } from '../../services/api.service';
+import HelloConnect from '../../components/HelloConnect';
 
 export default function Home() {
   const router = useRouter();
@@ -57,12 +58,7 @@ export default function Home() {
         <Text style={styles.buttonText}>Reintentar Conexión</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.profileButton}
-        onPress={() => router.push('/(tabs)/perfil')}
-      >
-        <Text style={styles.profileButtonText}>Ir a mi perfil</Text>
-      </TouchableOpacity>
+      <HelloConnect />
     </View>
   );
 }
