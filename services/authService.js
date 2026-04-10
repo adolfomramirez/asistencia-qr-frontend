@@ -29,6 +29,13 @@ export const login = async (email, password) => {
   }
 };
 
+export const getProfile = async () => {
+  const res = await axios.get(`${API_URL}/auth/me/profile`, {
+    headers: { Authorization: `Bearer ${_token}` },
+  });
+  return res.data;
+};
+
 export const logout = () => {
   _token = null;
   _user = null;
