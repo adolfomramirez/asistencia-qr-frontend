@@ -1,6 +1,6 @@
+import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Redirect, useRouter } from "expo-router";
 import { getToken, login } from "../services/authService";
 
 const DEMO_USER = "ana_lopez";
@@ -22,7 +22,7 @@ export default function LoginScreen() {
       console.log("Sesión iniciada:", res);
       // Guardar token en SecureStore o AsyncStorage
       router.replace("/(tabs)");
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
