@@ -14,20 +14,20 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleLogin = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await login(email, password);
-      console.log("Sesión iniciada:", res);
-      // Guardar token en SecureStore o AsyncStorage
-      router.replace("/(tabs)");
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const handleLogin = async () => {
+  setLoading(true);
+  setError("");
+  try {
+    const res = await login(email, password);
+    console.log("Sesión iniciada:", res);
+    router.replace("/(tabs)");
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const isDisabled = !email || !password || loading;
 

@@ -24,3 +24,20 @@ export const getMyRecentAttendances = async (limit = 5) => {
     throw new Error("No se pudo cargar el historial de asistencias.");
   }
 };
+
+// NUEVO: registrar asistencia con QR
+export const registerAttendance = async (qrToken, studentId) => {
+  try {
+    const { data } = await axios.post(
+      `${API_URL}/attendance/register`,
+      { qrToken, studentId },
+      { headers: { Authorization: `Bearer ${getToken()}` } }
+    );
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || "Error al registrar asistencia.");
+    }
+    throw new Error("No se pudo conectar al servidor.");
+  }
+};

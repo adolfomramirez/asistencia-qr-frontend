@@ -1,44 +1,74 @@
-import { useRouter } from "expo-router";
-import React from "react";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
-  success: boolean;
-  message?: string;
-};
-
-export default function Confirmacion({ success, message }: Props) {
+export default function ConfirmacionScreen() {
+  const { message, success, points, course } = useLocalSearchParams();
   const router = useRouter();
 
-  return (
-    <View style={styles.container}>
-      <Text style={[styles.icon, success ? styles.success : styles.error]}>
-        {success ? "✔️" : "❌"}
-      </Text>
-      <Text style={styles.title}>
-        {success ? "Asistencia registrada con éxito" : "Error al registrar asistencia"}
-      </Text>
-      {message && <Text style={styles.message}>{message}</Text>}
+  const isSuccess = success === "true";
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push("/(tabs)")}
-      >
-        <Text style={styles.buttonText}>
-          {success ? "Volver al inicio" : "Intentar nuevamente"}
-        </Text>
-      </TouchableOpacity>
+  return (
+    <View style={styles.screen}>
+      <View style={styles.card}>
+        {isSuccess ? (
+          <>
+            <MaterialIcons name="check-circle" size={80} color="#10B981" />
+            <Text style={styles.title}>¡Asistencia Confirmada!</Text>
+            <Text style={styles.course}>{course}</Text>
+            {points && <Text style={styles.points}>+{points} puntos ganados</Text>}
+            <Text style={styles.message}>{message}</Text>
+            <TouchableOpacity onPress={() => router.replace("/perfil")} style={styles.button}>
+              <Text style={styles.buttonText}>Ir a Perfil</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <MaterialIcons name="error" size={80} color="#EF4444" />
+            <Text style={styles.title}>Error</Text>
+            <Text style={styles.message}>{message}</Text>
+            <TouchableOpacity onPress={() => router.replace("/scanQR")} style={[styles.button, styles.buttonError]}>
+              <Text style={styles.buttonText}>Intentar de nuevo</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  icon: { fontSize: 60, marginBottom: 20 },
-  success: { color: "green" },
-  error: { color: "red" },
-  title: { fontSize: 24, fontWeight: "bold", marginBottom: 10 },
-  message: { fontSize: 16, color: "#555", textAlign: "center", marginBottom: 20 },
-  button: { backgroundColor: "#007AFF", padding: 15, borderRadius: 8 },
-  buttonText: { color: "#fff", fontWeight: "bold" },
+  screen: {
+    flex: 1,
+    backgroundColor: "#E2E8F0",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+    width: "100%",
+    maxWidth: 350,
+  },
+  title: { fontSize: 22, fontWeight: "700", marginTop: 12, color: "#1E293B" },
+  course: { fontSize: 18, marginTop: 6, color: "#2563EB" },
+  points: { fontSize: 16, color: "#10B981", marginTop: 6 },
+  message: { fontSize: 14, color: "#475569", marginTop: 10, textAlign: "center" },
+  button: {
+    marginTop: 20,
+    backgroundColor: "#2563EB",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  buttonError: { backgroundColor: "#EF4444" },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
 });

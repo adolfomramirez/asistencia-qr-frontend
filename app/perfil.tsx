@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Redirect, useRouter } from "expo-router";
-import { getToken, getUser, logout } from "../services/authService";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
+import { getToken, getUser, loadAuthData, logout } from "../services/authService";
 
 export default function PerfilScreen() {
   const token = getToken();
@@ -19,7 +19,10 @@ export default function PerfilScreen() {
     router.replace("/login");
   };
 
-  useEffect(() => {
+useEffect(() => {
+  // ✅ Cargar datos persistidos al montar
+  loadAuthData().then(() => {
+    const token = getToken();
     if (!token) {
       setLoading(false);
       return;
@@ -32,7 +35,9 @@ export default function PerfilScreen() {
       })
       .catch((e) => setError(e.message || "No se pudo cargar el perfil."))
       .finally(() => setLoading(false));
-  }, [token]);
+  });
+}, []);
+
 
   const userName = backendUser?.name || backendUser?.username || "Usuario";
   const userEmail = backendUser?.email || "Sin correo";
@@ -95,13 +100,14 @@ export default function PerfilScreen() {
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={[styles.actionCard, styles.actionBlue]}>
-              <View style={[styles.actionIconWrap, styles.actionIconBlue]}>
-                <MaterialIcons name="qr-code-scanner" size={28} color="#FFFFFF" />
-              </View>
-              <Text style={styles.actionTitle}>Escanear QR</Text>
-              <Text style={styles.actionSubtitle}>Registrar clase</Text>
-            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionCard, styles.actionBlue]} onPress={() => router.push({ pathname: "/scanQR" })}>
+          <View style={[styles.actionIconWrap, styles.actionIconBlue]}>
+            <MaterialIcons name="qr-code-scanner" size={28} color="#FFFFFF" />
+          </View>
+          <Text style={styles.actionTitle}>Escanear QR</Text>
+          <Text style={styles.actionSubtitle}>Registrar clase</Text>
+        </TouchableOpacity>
+
 
             <TouchableOpacity style={[styles.actionCard, styles.actionFuchsia]}>
               <View style={[styles.actionIconWrap, styles.actionIconFuchsia]}>
