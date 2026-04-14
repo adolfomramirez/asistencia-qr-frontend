@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { Redirect, useRouter } from "expo-router";
 import { getToken, login } from "../services/authService";
 
-const DEMO_USER = "ana_lopez";
+const DEMO_EMAIL = "ana@davinci.edu";
 const DEMO_PASSWORD = "alumno123";
 
 export default function LoginScreen() {
@@ -45,9 +45,11 @@ export default function LoginScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Usuario"
+          placeholder="Correo electrónico"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
         />
         <TextInput
           style={styles.input}
@@ -69,7 +71,7 @@ export default function LoginScreen() {
       </View>
 
       <Text style={styles.demoHint}>
-        Demo: usuario <Text selectable style={styles.demoInlineValue}>{DEMO_USER}</Text> / contraseña{" "}
+        Demo: correo <Text selectable style={styles.demoInlineValue}>{DEMO_EMAIL}</Text> / contraseña{" "}
         <Text selectable style={styles.demoInlineValue}>{DEMO_PASSWORD}</Text>
       </Text>
     </View>
