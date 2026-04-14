@@ -77,7 +77,6 @@ export default function PerfilScreen() {
 
     return `${dateText} · ${timeText}`;
   };
-
   if (!token) {
     return <Redirect href="/login" />;
   }
