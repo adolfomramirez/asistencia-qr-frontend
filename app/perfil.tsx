@@ -116,6 +116,16 @@ useEffect(() => {
               <Text style={styles.actionTitle}>Tomar Foto</Text>
               <Text style={styles.actionSubtitle}>Actualizar perfil</Text>
             </TouchableOpacity>
+
+            {backendUser?.role?.toUpperCase() === 'ADMIN' && (
+              <TouchableOpacity style={[styles.actionCard, { borderColor: "#FCA5A5", backgroundColor: "#FEF2F2" }]} onPress={() => router.push({ pathname: "/admin-qr" })}>
+                <View style={[styles.actionIconWrap, { backgroundColor: "#EF4444" }]}>
+                  <MaterialIcons name="admin-panel-settings" size={28} color="#FFFFFF" />
+                </View>
+                <Text style={styles.actionTitle}>Admin QR</Text>
+                <Text style={styles.actionSubtitle}>Panel Admin</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.block}>

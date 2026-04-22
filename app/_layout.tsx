@@ -1,12 +1,13 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { apiService } from '../services/api.service';
+import { loadAuthData } from '../services/authService';
 
 export const unstable_settings = {
   initialRouteName: 'login',
@@ -16,6 +17,14 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Inicializar los datos de AsyncStorage apenas la app cargue (Evita deslogueos aparentes en refresh Web)
+    loadAuthData().catch(console.error).finally(() => {
+      setIsReady(true);
+    });
+  }, []);
 
   useEffect(() => {
     // Simple authentication check placeholder
@@ -31,7 +40,9 @@ export default function RootLayout() {
       router.replace('/(tabs)');
     }
     */
-  }, [segments]);
+  }, [segments, isReady]);
+
+  if (!isReady) return null;
 
   const navigationTheme =
     colorScheme === 'dark'
