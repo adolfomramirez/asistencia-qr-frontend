@@ -15,6 +15,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: '#3B82F6',
         tabBarInactiveTintColor: '#94A3B8',
@@ -35,34 +36,49 @@ export default function TabLayout() {
           fontSize: 14,
           marginTop: 2,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="grid-view" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="grid-view" color={color} />
+          ),
           tabBarLabel: ({ color, focused }) => (
-            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>Inicio</Text>
+            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>
+              Inicio
+            </Text>
           ),
         }}
       />
+
       <Tabs.Screen
         name="historial"
         options={{
           title: 'Historial',
-          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="history" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="history" color={color} />
+          ),
           tabBarLabel: ({ color, focused }) => (
-            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>Historial</Text>
+            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>
+              Historial
+            </Text>
           ),
         }}
       />
+
       <Tabs.Screen
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color }) => <MaterialIcons size={24} name="person-outline" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons size={24} name="person-outline" color={color} />
+          ),
           tabBarLabel: ({ color, focused }) => (
-            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>Perfil</Text>
+            <Text style={{ color, fontSize: 14, fontWeight: focused ? '700' : '500' }}>
+              Perfil
+            </Text>
           ),
         }}
       />
