@@ -54,10 +54,10 @@ useEffect(() => {
   const userEmail = backendUser?.email || "Sin correo";
 
   const levelLabels: Record<string, string> = {
-    BRONZE: "Bronce",
-    SILVER: "Plata",
-    GOLD: "Oro",
-    DIAMOND: "Diamante",
+    BRONZE: "Bronce 🥉",
+    SILVER: "Plata 🥈",
+    GOLD: "Oro 🥇",
+    DIAMOND: "Diamante 💎",
   };
 
   const levelColors: Record<string, { background: string; text: string }> = {
