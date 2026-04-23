@@ -1,16 +1,18 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
-import { getToken, getUser, loadAuthData, logout } from "../services/authService";
+import { getProfile, getToken, getUser, loadAuthData, logout } from "../services/authService";
 
 export default function PerfilScreen() {
   const token = getToken();
   const backendUser = getUser();
   const [summary, setSummary] = useState({ present: 0, late: 0, pending: 0, total: 0 });
   const [recentAttendances, setRecentAttendances] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -20,27 +22,55 @@ export default function PerfilScreen() {
   };
 
 useEffect(() => {
-  // ✅ Cargar datos persistidos al montar
-  loadAuthData().then(() => {
-    const token = getToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  loadAuthData()
+    .then(async () => {
+      const token = getToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-    Promise.all([getMyAttendanceSummary(), getMyRecentAttendances(8)])
-      .then(([summaryData, recentData]) => {
+      try {
+        const [summaryData, recentData, profileData] = await Promise.all([
+          getMyAttendanceSummary(),
+          getMyRecentAttendances(8),
+          getProfile(),
+        ]);
+
         setSummary(summaryData);
         setRecentAttendances(recentData);
-      })
-      .catch((e) => setError(e.message || "No se pudo cargar el perfil."))
-      .finally(() => setLoading(false));
-  });
+        setProfile(profileData);
+      } catch (e) {
+        setError((e as Error).message || "No se pudo cargar el perfil.");
+      } finally {
+        setLoading(false);
+      }
+    })
+    .finally(() => setIsReady(true));
 }, []);
 
 
   const userName = backendUser?.name || backendUser?.username || "Usuario";
   const userEmail = backendUser?.email || "Sin correo";
+
+  const levelLabels: Record<string, string> = {
+    BRONZE: "Bronce",
+    SILVER: "Plata",
+    GOLD: "Oro",
+    DIAMOND: "Diamante",
+  };
+
+  const levelColors: Record<string, { background: string; text: string }> = {
+    BRONZE: { background: "#F59E0B", text: "#1F2937" },
+    SILVER: { background: "#64748B", text: "#F8FAFC" },
+    GOLD: { background: "#D97706", text: "#FEF3C7" },
+    DIAMOND: { background: "#2563EB", text: "#DBEAFE" },
+  };
+
+  const profileLevel = profile?.level || "BRONZE";
+  const formattedLevel = levelLabels[profileLevel] || profileLevel;
+  const progressPercent = Math.min(100, Math.max(0, profile?.progress ?? 0));
+  const nextLevelLabel = levelLabels[profile?.nextLevel || ""] || profile?.nextLevel || "Siguiente nivel";
 
   const recentItem = recentAttendances[0];
 
@@ -82,7 +112,12 @@ useEffect(() => {
 
     return `${dateText} · ${timeText}`;
   };
-  if (!token) {
+
+  if (!token && !isReady) {
+    return null;
+  }
+
+  if (!token && isReady) {
     return <Redirect href="/login" />;
   }
 
@@ -99,6 +134,48 @@ useEffect(() => {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.profileSummaryCard}>
+            <View style={styles.profileSummaryTop}>
+              <View style={styles.avatarWrapper}>
+                {profile?.avatarUrl ? (
+                  <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
+                  </View>
+                )}
+                <View style={[styles.levelBadge, { backgroundColor: levelColors[profileLevel]?.background || "#2563EB" }]}>
+                  <Text style={[styles.levelBadgeText, { color: levelColors[profileLevel]?.text || "#FFFFFF" }]}>{formattedLevel}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.profileSummaryName}>{userName}</Text>
+              <Text style={styles.profileSummaryEmail}>{userEmail}</Text>
+            </View>
+
+            <View style={styles.pointsCard}>
+              <View style={styles.pointsCardHeader}>
+                <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
+                <MaterialIcons name="emoji-events" size={20} color="#F59E0B" />
+              </View>
+              <Text style={styles.pointsCardValue}>{profile?.points ?? 0}</Text>
+              <Text style={styles.pointsCardCaption}>Nivel actual: {formattedLevel}</Text>
+            </View>
+
+            <View style={styles.progressSection}>
+              <View style={styles.progressHeaderRow}>
+                <Text style={styles.progressSectionLabel}>Progreso hacia el siguiente nivel</Text>
+                <Text style={styles.progressSectionValue}>{progressPercent}%</Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+              </View>
+              <Text style={styles.progressHint}>
+                {profile ? `${profile.pointsToNext ?? 0} puntos para ${nextLevelLabel}` : "Cargando progreso..."}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.actionsRow}>
             <TouchableOpacity style={[styles.actionCard, styles.actionBlue]} onPress={() => router.push({ pathname: "/scanQR" })}>
           <View style={[styles.actionIconWrap, styles.actionIconBlue]}>
@@ -323,6 +400,154 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: "#64748B",
+    textAlign: "center",
+  },
+  profileSummaryCard: {
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    padding: 22,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginBottom: 22,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  profileSummaryTop: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 14,
+  },
+  avatarWrapper: {
+    position: "relative",
+    marginBottom: 14,
+  },
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#CBD5E1",
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
+  },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: "#FFFFFF",
+  },
+  avatarInitial: {
+    color: "#FFFFFF",
+    fontSize: 36,
+    fontWeight: "700",
+  },
+  levelBadge: {
+    position: "absolute",
+    bottom: -8,
+    left: "50%",
+    transform: [{ translateX: -45 }],
+    minWidth: 90,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  levelBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  profileSummaryText: {
+    alignItems: "center",
+  },
+  profileSummaryName: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  profileSummaryEmail: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+  },
+  pointsCard: {
+    marginTop: 18,
+    padding: 18,
+    borderRadius: 22,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  pointsCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  pointsCardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E3A8A",
+  },
+  pointsCardValue: {
+    fontSize: 34,
+    fontWeight: "800",
+    color: "#1D4ED8",
+    marginBottom: 6,
+  },
+  pointsCardCaption: {
+    fontSize: 13,
+    color: "#475569",
+  },
+  progressSection: {
+    marginTop: 18,
+  },
+  progressHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  progressSectionLabel: {
+    fontSize: 13,
+    color: "#475569",
+    flex: 1,
+    marginRight: 12,
+  },
+  progressSectionValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  progressBar: {
+    marginTop: 12,
+    width: "100%",
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: "#E0F2FE",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#2563EB",
+  },
+  progressHint: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#475569",
     textAlign: "center",
   },
   block: {
