@@ -152,15 +152,17 @@ useEffect(() => {
               <Text style={styles.profileSummaryName}>{userName}</Text>
               <Text style={styles.profileSummaryEmail}>{userEmail}</Text>
             </View>
-
-            <View style={styles.pointsCard}>
+            <TouchableOpacity    
+              style={styles.pointsCard}
+              onPress={() => router.push("/SistemaNiveles")}>
               <View style={styles.pointsCardHeader}>
                 <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
                 <MaterialIcons name="emoji-events" size={20} color="#F59E0B" />
               </View>
               <Text style={styles.pointsCardValue}>{profile?.points ?? 0}</Text>
               <Text style={styles.pointsCardCaption}>Nivel actual: {formattedLevel}</Text>
-            </View>
+                </TouchableOpacity>
+            
 
             <View style={styles.progressSection}>
               <View style={styles.progressHeaderRow}>
