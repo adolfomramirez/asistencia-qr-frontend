@@ -15,6 +15,10 @@ import QRCode from 'react-native-qrcode-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { apiService } from '../services/api.service';
+import axios from 'axios';
+import { API_URL } from '../config/api';
+import { getToken } from '../services/authService';
 
 type Session = {
   id: string;
@@ -97,21 +101,53 @@ export default function AdminQRScreen() {
   const [isDynamicSize, setIsDynamicSize] = useState(false);
   const [dynamicSizeInput, setDynamicSizeInput] = useState('250');
 
-  const generateSessions = () => {
-    if (!teacher || !course || !startDate || !scheduleTime) {
-      alert('Por favor, completa al menos el catedrático, curso, fecha inicio y horario.');
+  const generateSessions = async () => {
+    if (!startDate || !scheduleTime) {
+      alert('Por favor, completa al menos la fecha inicio y horario.');
       return;
     }
     
-    const newSession: Session = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: startDate,
-      time: scheduleTime,
-      teacher,
-      course,
-    };
+    try {
+      const tokenAuth = getToken();
+      if (!tokenAuth) {
+        alert('No estás autenticado.');
+        return;
+      }
 
-    setSessions([...sessions, newSession]);
+      // 1. Crear sesión en el backend (usando sectionId 1 del seed para "Desarrollo Web")
+      const { data: sessionResponse } = await axios.post<any>(
+        `${API_URL}/attendance/sessions`, 
+        {
+          sectionId: 1, 
+          date: startDate,
+          startTime: scheduleTime + ":00",
+        },
+        { headers: { Authorization: `Bearer ${tokenAuth}` } }
+      );
+      
+      const sessionId = sessionResponse.classSession.id;
+      
+      // 2. Generar el token QR
+      const { data: qrResponse } = await axios.post<any>(
+        `${API_URL}/attendance/generate-qr`, 
+        { sessionId },
+        { headers: { Authorization: `Bearer ${tokenAuth}` } }
+      );
+
+      const token = qrResponse.qrToken.token;
+
+      const newSession: Session = {
+        id: token, // Usamos el token real del backend
+        date: startDate,
+        time: scheduleTime,
+        teacher: sessionResponse.classSession?.teacher?.name || teacher || "Prof. García",
+        course: sessionResponse.classSession?.section?.course?.name || course || "Desarrollo Web",
+      };
+
+      setSessions([...sessions, newSession]);
+    } catch (error: any) {
+      alert('Error al conectar con el backend: ' + (error?.response?.data?.error || error.message || 'Error desconocido'));
+    }
   };
 
   const removeSession = (id: string) => {
@@ -125,12 +161,9 @@ export default function AdminQRScreen() {
 
   const getQRValue = () => {
     if (!selectedSession) return 'Empty';
-    if (qrFormat === 'JSON') {
-      return JSON.stringify(selectedSession);
-    } else {
-      const baseUrl = 'https://mi-dominio.com/asistencia';
-      return `${baseUrl}?id=${selectedSession.id}&course=${encodeURIComponent(selectedSession.course)}`;
-    }
+    // Para que el escáner funcione sin errores, necesitamos mandar el token raw.
+    // El token es el ID de la sesión generada.
+    return selectedSession.id;
   };
 
   const currentSize = isDynamicSize ? (parseInt(dynamicSizeInput) || 250) : 250;
@@ -191,7 +224,7 @@ export default function AdminQRScreen() {
                 ) : (
                   <>
                     <TouchableOpacity onPress={() => setShowStartPicker(true)}>
-                      <View pointerEvents="none">
+                      <View style={{ pointerEvents: 'none' }}>
                         <TextInput
                           style={styles.input}
                           placeholder="DD/MM/AAAA"
@@ -223,7 +256,7 @@ export default function AdminQRScreen() {
                 ) : (
                   <>
                     <TouchableOpacity onPress={() => setShowEndPicker(true)}>
-                      <View pointerEvents="none">
+                      <View style={{ pointerEvents: 'none' }}>
                         <TextInput
                           style={styles.input}
                           placeholder="DD/MM/AAAA"
@@ -256,7 +289,7 @@ export default function AdminQRScreen() {
               ) : (
                 <>
                   <TouchableOpacity onPress={() => setShowTimePicker(true)}>
-                    <View pointerEvents="none">
+                    <View style={{ pointerEvents: 'none' }}>
                       <TextInput
                         style={styles.input}
                         placeholder="Ej. 18:00"

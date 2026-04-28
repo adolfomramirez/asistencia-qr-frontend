@@ -29,14 +29,14 @@ export const getMyRecentAttendances = async (limit = 5) => {
 export const registerAttendance = async (qrToken, studentId) => {
   try {
     const { data } = await axios.post(
-      `${API_URL}/attendance/register`,
-      { qrToken, studentId },
+      `${API_URL}/attendance/scan`,
+      { token: qrToken, photoUrl: "https://via.placeholder.com/150" },
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     return data;
   } catch (error) {
     if (error.response) {
-      throw new Error(error.response.data?.message || "Error al registrar asistencia.");
+      throw new Error(error.response.data?.message || error.response.data?.error || "Error al registrar asistencia.");
     }
     throw new Error("No se pudo conectar al servidor.");
   }

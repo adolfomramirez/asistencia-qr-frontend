@@ -1,9 +1,29 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Platform, LogBox } from "react-native";
+
+LogBox.ignoreLogs([
+  "[Reanimated] Reduced motion setting is enabled",
+  "shadow*",
+  "style.resizeMode is deprecated"
+]);
 import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
 import { getProfile, getToken, getUser, loadAuthData, logout } from "../services/authService";
+
+// Helper for shadow compatibility
+const getShadowStyle = (elevation: number, opacity: number, radius: number, offset: number) => {
+  if (Platform.OS === "web") {
+    return { boxShadow: `0px ${offset}px ${radius}px rgba(15, 23, 42, ${opacity})` };
+  }
+  return {
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: offset },
+    shadowOpacity: opacity,
+    shadowRadius: radius,
+    elevation,
+  };
+};
 
 export default function PerfilScreen() {
   const token = getToken();
@@ -15,40 +35,46 @@ export default function PerfilScreen() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
 
   const handleLogout = () => {
     logout();
     router.replace("/login");
   };
 
-useEffect(() => {
-  loadAuthData()
-    .then(async () => {
-      const token = getToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    loadAuthData()
+      .then(async () => {
+        const currentToken = getToken();
+        if (!currentToken) {
+          setLoading(false);
+          return;
+        }
 
-      try {
-        const [summaryData, recentData, profileData] = await Promise.all([
-          getMyAttendanceSummary(),
-          getMyRecentAttendances(8),
-          getProfile(),
-        ]);
+        try {
+          const [summaryData, recentData, profileData] = await Promise.all([
+            getMyAttendanceSummary(),
+            getMyRecentAttendances(8),
+            getProfile(),
+          ]);
 
-        setSummary(summaryData);
-        setRecentAttendances(recentData);
-        setProfile(profileData);
-      } catch (e) {
-        setError((e as Error).message || "No se pudo cargar el perfil.");
-      } finally {
-        setLoading(false);
-      }
-    })
-    .finally(() => setIsReady(true));
-}, []);
-
+          setSummary(summaryData || { present: 0, late: 0, pending: 0, total: 0 });
+          setRecentAttendances(recentData || []);
+          setProfile(profileData);
+        } catch (e) {
+          // Si el usuario es ADMIN o MAESTRO, no mostramos error por no tener perfil de alumno
+          const currentUser = getUser();
+          if (currentUser?.role?.toUpperCase() !== 'ADMIN' && currentUser?.role?.toUpperCase() !== 'MAESTRO') {
+            setError((e as Error).message || "No se pudo cargar el perfil.");
+          }
+        } finally {
+          setLoading(false);
+        }
+      })
+      .finally(() => setIsReady(true));
+  }, []);
 
   const userName = backendUser?.name || backendUser?.username || "Usuario";
   const userEmail = backendUser?.email || "Sin correo";
@@ -97,33 +123,19 @@ useEffect(() => {
 
   const formatDateTime = (dateValue?: string | Date, timeValue?: string | Date) => {
     if (!dateValue) return "Sin fecha";
-
     const date = new Date(dateValue);
-    const dateText = date.toLocaleDateString("es-GT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
+    const dateText = date.toLocaleDateString("es-GT", { day: "2-digit", month: "short", year: "numeric" });
     const time = timeValue ? new Date(timeValue) : null;
-    const timeText = time
-      ? time.toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" })
-      : "--:--";
-
+    const timeText = time ? time.toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }) : "--:--";
     return `${dateText} · ${timeText}`;
   };
 
-  if (!token && !isReady) {
-    return null;
-  }
-
-  if (!token && isReady) {
-    return <Redirect href="/login" />;
-  }
+  if (!token && !isReady) return null;
+  if (!token && isReady) return <Redirect href="/login" />;
 
   return (
     <View style={styles.screen}>
-      <View style={styles.shell}>
+      <View style={[styles.shell, isLargeScreen && styles.shellLarge]}>
         <View style={styles.header}>
           <View style={styles.headerGlowOne} />
           <View style={styles.headerGlowTwo} />
@@ -134,143 +146,155 @@ useEffect(() => {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.profileSummaryCard}>
-            <View style={styles.profileSummaryTop}>
-              <View style={styles.avatarWrapper}>
-                {profile?.avatarUrl ? (
-                  <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
+          <View style={isLargeScreen ? styles.rowLayout : undefined}>
+            <View style={isLargeScreen ? styles.leftColumn : undefined}>
+              <View style={[styles.profileSummaryCard, getShadowStyle(6, 0.08, 24, 10)]}>
+                <View style={styles.profileSummaryTop}>
+                  <View style={styles.avatarWrapper}>
+                    {profile?.avatarUrl ? (
+                      <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
+                      </View>
+                    )}
+                    <View style={[styles.levelBadge, { backgroundColor: levelColors[profileLevel]?.background || "#2563EB" }]}>
+                      <Text style={[styles.levelBadgeText, { color: levelColors[profileLevel]?.text || "#FFFFFF" }]}>{formattedLevel}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.profileSummaryName}>{userName}</Text>
+                  <Text style={styles.profileSummaryEmail}>{userEmail}</Text>
+                </View>
+
+                {backendUser?.role?.toUpperCase() !== 'ADMIN' && backendUser?.role?.toUpperCase() !== 'MAESTRO' && (
+                  <>
+                    <View style={[styles.pointsCard, getShadowStyle(4, 0.08, 14, 5)]}>
+                      <View style={styles.pointsCardHeader}>
+                        <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
+                        <MaterialIcons name="emoji-events" size={20} color="#F59E0B" />
+                      </View>
+                      <Text style={styles.pointsCardValue}>{profile?.points ?? 0}</Text>
+                      <Text style={styles.pointsCardCaption}>Nivel actual: {formattedLevel}</Text>
+                    </View>
+
+                    <View style={styles.progressSection}>
+                      <View style={styles.progressHeaderRow}>
+                        <Text style={styles.progressSectionLabel}>Progreso hacia el siguiente nivel</Text>
+                        <Text style={styles.progressSectionValue}>{progressPercent}%</Text>
+                      </View>
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+                      </View>
+                      <Text style={styles.progressHint}>
+                        {profile ? `${profile.pointsToNext ?? 0} puntos para ${nextLevelLabel}` : "Cargando progreso..."}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
+
+            <View style={isLargeScreen ? styles.rightColumn : undefined}>
+              <View style={styles.actionsRow}>
+                <TouchableOpacity style={[styles.actionCard, styles.actionBlue, getShadowStyle(2, 0.08, 6, 2)]} onPress={() => router.push({ pathname: "/scanQR" })}>
+                  <View style={[styles.actionIconWrap, styles.actionIconBlue, getShadowStyle(3, 0.18, 6, 2)]}>
+                    <MaterialIcons name="qr-code-scanner" size={28} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.actionTitle}>Escanear QR</Text>
+                  <Text style={styles.actionSubtitle}>Registrar clase</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={[styles.actionCard, styles.actionFuchsia, getShadowStyle(2, 0.08, 6, 2)]}>
+                  <View style={[styles.actionIconWrap, styles.actionIconFuchsia, getShadowStyle(3, 0.18, 6, 2)]}>
+                    <MaterialIcons name="photo-camera" size={28} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.actionTitle}>Tomar Foto</Text>
+                  <Text style={styles.actionSubtitle}>Actualizar perfil</Text>
+                </TouchableOpacity>
+
+                {backendUser?.role?.toUpperCase() === 'ADMIN' && (
+                  <TouchableOpacity style={[styles.actionCard, { borderColor: "#FCA5A5", backgroundColor: "#FEF2F2" }, getShadowStyle(2, 0.08, 6, 2)]} onPress={() => router.push({ pathname: "/admin-qr" })}>
+                    <View style={[styles.actionIconWrap, { backgroundColor: "#EF4444" }, getShadowStyle(3, 0.18, 6, 2)]}>
+                      <MaterialIcons name="admin-panel-settings" size={28} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.actionTitle}>Admin QR</Text>
+                    <Text style={styles.actionSubtitle}>Panel Admin</Text>
+                  </TouchableOpacity>
+                )}
+                {backendUser?.role?.toUpperCase() === 'MAESTRO' && (
+                  <TouchableOpacity style={[styles.actionCard, { borderColor: "#FDE047", backgroundColor: "#FEF9C3" }, getShadowStyle(2, 0.08, 6, 2)]} onPress={() => router.push({ pathname: "/admin-qr" })}>
+                    <View style={[styles.actionIconWrap, { backgroundColor: "#EAB308" }, getShadowStyle(3, 0.18, 6, 2)]}>
+                      <MaterialIcons name="class" size={28} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.actionTitle}>Generar QR</Text>
+                    <Text style={styles.actionSubtitle}>Iniciar Clase</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.block}>
+                <Text style={styles.blockTitle}>Resumen de Hoy</Text>
+                <View style={styles.summaryRow}>
+                  <View style={[styles.summaryCard, getShadowStyle(2, 0.07, 4, 1)]}>
+                    <Text style={[styles.summaryCount, { color: "#10B981" }]}>{summary.present}</Text>
+                    <Text style={styles.summaryLabel}>Presente</Text>
+                  </View>
+                  <View style={[styles.summaryCard, getShadowStyle(2, 0.07, 4, 1)]}>
+                    <Text style={[styles.summaryCount, { color: "#F59E0B" }]}>{summary.late}</Text>
+                    <Text style={styles.summaryLabel}>Tardanza</Text>
+                  </View>
+                  <View style={[styles.summaryCard, getShadowStyle(2, 0.07, 4, 1)]}>
+                    <Text style={[styles.summaryCount, { color: "#94A3B8" }]}>{summary.pending}</Text>
+                    <Text style={styles.summaryLabel}>Pendiente</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.block}>
+                <View style={styles.blockHeaderRow}>
+                  <Text style={styles.blockTitle}>Asistencias Recientes</Text>
+                  <TouchableOpacity>
+                    <Text style={styles.linkText}>Ver todas</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {recentItem ? (
+                  <View style={[styles.recentCard, getShadowStyle(2, 0.07, 4, 1)]}>
+                    <View style={styles.recentLeft}>
+                      <Text style={styles.recentTitle}>{recentItem.className}</Text>
+                      <View style={styles.metaRow}>
+                        <MaterialIcons name="place" size={16} color="#64748B" />
+                        <Text style={styles.metaText}>{recentItem.classroom || "Sin aula asignada"}</Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <MaterialIcons name="schedule" size={16} color="#64748B" />
+                        <Text style={styles.metaText}>{formatDateTime(recentItem.date, recentItem.startTime)}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.recentRight}>
+                      <Text style={[styles.statusBadge, { backgroundColor: statusToColor[recentItem.status] || "#94A3B8" }]}>
+                        {statusToLabel[recentItem.status] || recentItem.status}
+                      </Text>
+                      <MaterialIcons name={statusToIcon[recentItem.status] || "help"} size={26} color={statusToColor[recentItem.status] || "#94A3B8"} />
+                    </View>
+                  </View>
                 ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarInitial}>{userName.charAt(0).toUpperCase()}</Text>
+                  <View style={styles.emptyRecentCard}>
+                    <Text style={styles.emptyRecentText}>No hay asistencias recientes.</Text>
                   </View>
                 )}
-                <View style={[styles.levelBadge, { backgroundColor: levelColors[profileLevel]?.background || "#2563EB" }]}>
-                  <Text style={[styles.levelBadgeText, { color: levelColors[profileLevel]?.text || "#FFFFFF" }]}>{formattedLevel}</Text>
-                </View>
               </View>
 
-              <Text style={styles.profileSummaryName}>{userName}</Text>
-              <Text style={styles.profileSummaryEmail}>{userEmail}</Text>
-            </View>
+              {loading && <ActivityIndicator style={styles.loader} color="#2563EB" />}
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <View style={styles.pointsCard}>
-              <View style={styles.pointsCardHeader}>
-                <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
-                <MaterialIcons name="emoji-events" size={20} color="#F59E0B" />
-              </View>
-              <Text style={styles.pointsCardValue}>{profile?.points ?? 0}</Text>
-              <Text style={styles.pointsCardCaption}>Nivel actual: {formattedLevel}</Text>
-            </View>
-
-            <View style={styles.progressSection}>
-              <View style={styles.progressHeaderRow}>
-                <Text style={styles.progressSectionLabel}>Progreso hacia el siguiente nivel</Text>
-                <Text style={styles.progressSectionValue}>{progressPercent}%</Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
-              </View>
-              <Text style={styles.progressHint}>
-                {profile ? `${profile.pointsToNext ?? 0} puntos para ${nextLevelLabel}` : "Cargando progreso..."}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={[styles.actionCard, styles.actionBlue]} onPress={() => router.push({ pathname: "/scanQR" })}>
-          <View style={[styles.actionIconWrap, styles.actionIconBlue]}>
-            <MaterialIcons name="qr-code-scanner" size={28} color="#FFFFFF" />
-          </View>
-          <Text style={styles.actionTitle}>Escanear QR</Text>
-          <Text style={styles.actionSubtitle}>Registrar clase</Text>
-        </TouchableOpacity>
-
-
-            <TouchableOpacity style={[styles.actionCard, styles.actionFuchsia]}>
-              <View style={[styles.actionIconWrap, styles.actionIconFuchsia]}>
-                <MaterialIcons name="photo-camera" size={28} color="#FFFFFF" />
-              </View>
-              <Text style={styles.actionTitle}>Tomar Foto</Text>
-              <Text style={styles.actionSubtitle}>Actualizar perfil</Text>
-            </TouchableOpacity>
-
-            {backendUser?.role?.toUpperCase() === 'ADMIN' && (
-              <TouchableOpacity style={[styles.actionCard, { borderColor: "#FCA5A5", backgroundColor: "#FEF2F2" }]} onPress={() => router.push({ pathname: "/admin-qr" })}>
-                <View style={[styles.actionIconWrap, { backgroundColor: "#EF4444" }]}>
-                  <MaterialIcons name="admin-panel-settings" size={28} color="#FFFFFF" />
-                </View>
-                <Text style={styles.actionTitle}>Admin QR</Text>
-                <Text style={styles.actionSubtitle}>Panel Admin</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.block}>
-            <Text style={styles.blockTitle}>Resumen de Hoy</Text>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryCard}>
-                <Text style={[styles.summaryCount, { color: "#10B981" }]}>{summary.present}</Text>
-                <Text style={styles.summaryLabel}>Presente</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={[styles.summaryCount, { color: "#F59E0B" }]}>{summary.late}</Text>
-                <Text style={styles.summaryLabel}>Tardanza</Text>
-              </View>
-              <View style={styles.summaryCard}>
-                <Text style={[styles.summaryCount, { color: "#94A3B8" }]}>{summary.pending}</Text>
-                <Text style={styles.summaryLabel}>Pendiente</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.block}>
-            <View style={styles.blockHeaderRow}>
-              <Text style={styles.blockTitle}>Asistencias Recientes</Text>
-              <TouchableOpacity>
-                <Text style={styles.linkText}>Ver todas</Text>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={styles.logoutText}>Cerrar sesión</Text>
               </TouchableOpacity>
             </View>
-
-            {recentItem ? (
-              <View style={styles.recentCard}>
-                <View style={styles.recentLeft}>
-                  <Text style={styles.recentTitle}>{recentItem.className}</Text>
-
-                  <View style={styles.metaRow}>
-                    <MaterialIcons name="place" size={16} color="#64748B" />
-                    <Text style={styles.metaText}>{recentItem.classroom || "Sin aula asignada"}</Text>
-                  </View>
-
-                  <View style={styles.metaRow}>
-                    <MaterialIcons name="schedule" size={16} color="#64748B" />
-                    <Text style={styles.metaText}>{formatDateTime(recentItem.date, recentItem.startTime)}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.recentRight}>
-                  <Text style={[styles.statusBadge, { backgroundColor: statusToColor[recentItem.status] || "#94A3B8" }]}>
-                    {statusToLabel[recentItem.status] || recentItem.status}
-                  </Text>
-                  <MaterialIcons
-                    name={statusToIcon[recentItem.status] || "help"}
-                    size={26}
-                    color={statusToColor[recentItem.status] || "#94A3B8"}
-                  />
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyRecentCard}>
-                <Text style={styles.emptyRecentText}>No hay asistencias recientes.</Text>
-              </View>
-            )}
           </View>
-
-          {loading && <ActivityIndicator style={styles.loader} color="#2563EB" />}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Cerrar sesion</Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
     </View>
@@ -291,6 +315,28 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     overflow: "hidden",
+  },
+  shellLarge: {
+    maxWidth: "100%",
+    width: "100%",
+    marginTop: 0,
+    marginBottom: 0,
+    borderRadius: 0,
+    borderWidth: 0,
+    paddingHorizontal: "2%",
+    flex: 1,
+  },
+  rowLayout: {
+    flexDirection: "row",
+    gap: 40,
+    marginTop: 30,
+    width: "100%",
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
+    flex: 2,
   },
   header: {
     backgroundColor: "#2563EB",
@@ -357,11 +403,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 20,
     alignItems: "center",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
   },
   actionBlue: {
     borderColor: "#BFDBFE",
@@ -377,11 +418,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
   },
   actionIconBlue: {
     backgroundColor: "#2563EB",
@@ -409,11 +445,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
     marginBottom: 22,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 6,
   },
   profileSummaryTop: {
     alignItems: "center",
@@ -463,9 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  profileSummaryText: {
-    alignItems: "center",
-  },
   profileSummaryName: {
     fontSize: 22,
     fontWeight: "800",
@@ -485,11 +513,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     borderWidth: 1,
     borderColor: "#DBEAFE",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 4,
   },
   pointsCardHeader: {
     flexDirection: "row",
@@ -572,11 +595,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 16,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 2,
   },
   summaryCount: {
     fontSize: 34,
@@ -608,11 +626,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 10,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 2,
   },
   emptyRecentCard: {
     marginTop: 14,
