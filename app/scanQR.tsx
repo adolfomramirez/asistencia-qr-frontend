@@ -54,10 +54,10 @@ export default function ScanQRScreen() {
       router.push({
         pathname: "/confirmacion",
         params: {
-          message: response.message,
+          message: response.message || "Asistencia registrada",
           success: "true",
           points: 5,
-          course: response.courseId,
+          course: response.attendance?.sessionId || "",
         },
       });
     } catch (error: any) {
