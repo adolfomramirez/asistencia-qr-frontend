@@ -18,7 +18,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { apiService } from '../services/api.service';
 import axios from 'axios';
 import { API_URL } from '../config/api';
-import { getToken } from '../services/authService';
+import { getToken, getUser } from '../services/authService';
+import SectionPicker from '../components/SectionPicker';
 
 type Session = {
   id: string;
@@ -80,8 +81,8 @@ const WebTimeInput = ({ value, onChange, placeholder }: any) => {
 // ============================================
 export default function AdminQRScreen() {
   const router = useRouter();
-  const [teacher, setTeacher] = useState('');
-  const [course, setCourse] = useState('');
+  const user = getUser();
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
@@ -102,8 +103,8 @@ export default function AdminQRScreen() {
   const [dynamicSizeInput, setDynamicSizeInput] = useState('250');
 
   const generateSessions = async () => {
-    if (!startDate || !scheduleTime) {
-      alert('Por favor, completa al menos la fecha inicio y horario.');
+    if (!startDate || !scheduleTime || !selectedSectionId) {
+      alert('Por favor, completa la fecha inicio, horario y selecciona un curso.');
       return;
     }
     
@@ -114,11 +115,11 @@ export default function AdminQRScreen() {
         return;
       }
 
-      // 1. Crear sesión en el backend (usando sectionId 1 del seed para "Desarrollo Web")
+      // 1. Crear sesión en el backend
       const { data: sessionResponse } = await axios.post<any>(
         `${API_URL}/attendance/sessions`, 
         {
-          sectionId: 1, 
+          sectionId: selectedSectionId, 
           date: startDate,
           startTime: scheduleTime + ":00",
         },
@@ -137,11 +138,11 @@ export default function AdminQRScreen() {
       const token = qrResponse.qrToken.token;
 
       const newSession: Session = {
-        id: token, // Usamos el token real del backend
+        id: token,
         date: startDate,
         time: scheduleTime,
-        teacher: sessionResponse.classSession?.teacher?.name || teacher || "Prof. García",
-        course: sessionResponse.classSession?.section?.course?.name || course || "Desarrollo Web",
+        teacher: user?.name || 'Profesor',
+        course: sessionResponse.classSession?.section?.course?.name || 'Curso',
       };
 
       setSessions([...sessions, newSession]);
@@ -196,23 +197,17 @@ export default function AdminQRScreen() {
             
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Catedrático</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ej. Juan Pérez"
-                placeholderTextColor="#9CA3AF"
-                value={teacher}
-                onChangeText={setTeacher}
-              />
+              <View style={styles.readOnlyField}>
+                <Ionicons name="person" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+                <Text style={styles.readOnlyFieldText}>{user?.name || 'Cargando...'}</Text>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Curso</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ej. Matemáticas Discretas"
-                placeholderTextColor="#9CA3AF"
-                value={course}
-                onChangeText={setCourse}
+              <SectionPicker
+                selectedSectionId={selectedSectionId}
+                onSectionChange={(id) => setSelectedSectionId(id)}
               />
             </View>
 
@@ -544,6 +539,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#111827',
   },
+  readOnlyField: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  readOnlyFieldText: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
   row: {
     flexDirection: 'row',
   },
@@ -696,7 +716,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 6
   },
-  modalBody: {},
+  modalBody: {
+    // intentionally empty
+  },
   formatSelector: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
@@ -788,5 +810,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18
-  },
+  }
 });
