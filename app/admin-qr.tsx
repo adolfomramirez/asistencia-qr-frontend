@@ -554,16 +554,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
   },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111827',
-  },
   row: {
     flexDirection: 'row',
   },
