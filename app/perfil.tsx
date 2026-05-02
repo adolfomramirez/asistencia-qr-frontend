@@ -1,15 +1,15 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Platform, LogBox } from "react-native";
+import { ActivityIndicator, Image, LogBox, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
+import { getProfile, getToken, getUser, loadAuthData, logout } from "../services/authService";
 
 LogBox.ignoreLogs([
   "[Reanimated] Reduced motion setting is enabled",
   "shadow*",
   "style.resizeMode is deprecated"
 ]);
-import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
-import { getProfile, getToken, getUser, loadAuthData, logout } from "../services/authService";
 
 // Helper for shadow compatibility
 const getShadowStyle = (elevation: number, opacity: number, radius: number, offset: number) => {
@@ -169,6 +169,9 @@ export default function PerfilScreen() {
 
                 {backendUser?.role?.toUpperCase() !== 'ADMIN' && backendUser?.role?.toUpperCase() !== 'MAESTRO' && (
                   <>
+                  <TouchableOpacity 
+                    
+                    onPress={() => router.push('/SistemaNiveles')}>
                     <View style={[styles.pointsCard, getShadowStyle(4, 0.08, 14, 5)]}>
                       <View style={styles.pointsCardHeader}>
                         <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
@@ -177,6 +180,7 @@ export default function PerfilScreen() {
                       <Text style={styles.pointsCardValue}>{profile?.points ?? 0}</Text>
                       <Text style={styles.pointsCardCaption}>Nivel actual: {formattedLevel}</Text>
                     </View>
+                    </TouchableOpacity> 
 
                     <View style={styles.progressSection}>
                       <View style={styles.progressHeaderRow}>
