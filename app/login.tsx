@@ -31,7 +31,7 @@ export default function LoginScreen() {
     try {
       const res = await login(email, password);
       console.log("Sesión iniciada:", res);
-      router.replace("/scanQR");
+      router.replace("/perfil");
     } catch (err: any) {
       setError("Usuario o contraseña incorrectos");
     } finally {
@@ -66,7 +66,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.button}
-            onPress={() => router.replace("/scanQR")}
+            onPress={() => router.replace("/perfil")}
           >
             <Text style={styles.buttonText}>Continuar</Text>
           </TouchableOpacity>
@@ -135,16 +135,6 @@ export default function LoginScreen() {
         <Text style={styles.forgot}>¿Olvidaste contraseña?</Text>
       </View>
 
-      <Text style={styles.demoHint}>
-        Demo: correo{" "}
-        <Text selectable style={styles.demoInlineValue}>
-          {DEMO_EMAIL}
-        </Text>{" "}
-        / contraseña{" "}
-        <Text selectable style={styles.demoInlineValue}>
-          {DEMO_PASSWORD}
-        </Text>
-      </Text>
     </View>
   );
 }
