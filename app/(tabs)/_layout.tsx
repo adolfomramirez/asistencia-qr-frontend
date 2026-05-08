@@ -22,15 +22,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E2E8F0',
-          paddingHorizontal: 24,
-          paddingTop: 8,
-          paddingBottom: 10,
-          height: 80,
-          elevation: 0,
-          shadowOpacity: 0,
+          display: 'none',
         },
         tabBarLabelStyle: {
           fontSize: 14,

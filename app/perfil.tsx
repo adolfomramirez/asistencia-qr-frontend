@@ -1,7 +1,10 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, LogBox, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Image, LogBox, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Alert } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
+import axios from "axios";
+import { API_URL } from "../config/api";
 import { getMyAttendanceSummary, getMyRecentAttendances } from "../services/attendanceService";
 import { getProfile, getToken, getUser, loadAuthData, logout } from "../services/authService";
 
@@ -33,6 +36,7 @@ export default function PerfilScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
   
@@ -42,6 +46,103 @@ export default function PerfilScreen() {
   const handleLogout = () => {
     logout();
     router.replace("/login");
+  };
+
+  const uploadAvatar = async (uri: string) => {
+    try {
+      const formData = new FormData();
+      
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('avatar', blob, 'avatar.png');
+      } else {
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename || '');
+        const type = match ? `image/${match[1]}` : `image`;
+        // @ts-ignore
+        formData.append('avatar', { uri, name: filename, type });
+      }
+
+      const response = await axios.post(`${API_URL}/auth/me/avatar`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (response.data.success) {
+        setProfile((prev: any) => ({ ...prev, avatarUrl: response.data.avatarUrl }));
+      }
+    } catch (error) {
+      console.error("Error subiendo avatar:", error);
+      Alert.alert("Error", "No se pudo subir la imagen al servidor.");
+    }
+  };
+
+  const pickImage = async () => {
+    setShowAvatarMenu(false);
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const uri = result.assets[0].uri;
+      setProfile((prev: any) => ({ ...prev, avatarUrl: uri }));
+      await uploadAvatar(uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    setShowAvatarMenu(false);
+    let permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (permissionResult.granted === false) {
+      Alert.alert("Permiso denegado", "Necesitas otorgar permisos de cámara para tomar una foto.");
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const uri = result.assets[0].uri;
+      setProfile((prev: any) => ({ ...prev, avatarUrl: uri }));
+      await uploadAvatar(uri);
+    }
+  };
+
+  const handleUpdateAvatar = () => {
+    if (Platform.OS === 'web') {
+      setShowAvatarMenu(true);
+      return;
+    }
+
+    Alert.alert(
+      profile?.avatarUrl ? "Cambiar foto de perfil" : "Agregar foto de perfil",
+      "Elige una opción",
+      [
+        {
+          text: "Tomar Foto",
+          onPress: takePhoto,
+        },
+        {
+          text: "Elegir de Galería",
+          onPress: pickImage,
+        },
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   useEffect(() => {
@@ -150,7 +251,7 @@ export default function PerfilScreen() {
             <View style={isLargeScreen ? styles.leftColumn : undefined}>
               <View style={[styles.profileSummaryCard, getShadowStyle(6, 0.08, 24, 10)]}>
                 <View style={styles.profileSummaryTop}>
-                  <View style={styles.avatarWrapper}>
+                  <TouchableOpacity style={styles.avatarWrapper} onPress={handleUpdateAvatar}>
                     {profile?.avatarUrl ? (
                       <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} resizeMode="cover" />
                     ) : (
@@ -161,7 +262,7 @@ export default function PerfilScreen() {
                     <View style={[styles.levelBadge, { backgroundColor: levelColors[profileLevel]?.background || "#2563EB" }]}>
                       <Text style={[styles.levelBadgeText, { color: levelColors[profileLevel]?.text || "#FFFFFF" }]}>{formattedLevel}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   <Text style={styles.profileSummaryName}>{userName}</Text>
                   <Text style={styles.profileSummaryEmail}>{userEmail}</Text>
@@ -171,7 +272,7 @@ export default function PerfilScreen() {
                   <>
                   <TouchableOpacity 
                     
-                    onPress={() => router.push('/SistemaNiveles')}>
+                    onPress={() => router.push('/sistema-niveles')}>
                     <View style={[styles.pointsCard, getShadowStyle(4, 0.08, 14, 5)]}>
                       <View style={styles.pointsCardHeader}>
                         <Text style={styles.pointsCardTitle}>Puntos acumulados</Text>
@@ -209,7 +310,7 @@ export default function PerfilScreen() {
                   <Text style={styles.actionSubtitle}>Registrar clase</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.actionCard, styles.actionFuchsia, getShadowStyle(2, 0.08, 6, 2)]}>
+                <TouchableOpacity style={[styles.actionCard, styles.actionFuchsia, getShadowStyle(2, 0.08, 6, 2)]} onPress={handleUpdateAvatar}>
                   <View style={[styles.actionIconWrap, styles.actionIconFuchsia, getShadowStyle(3, 0.18, 6, 2)]}>
                     <MaterialIcons name="photo-camera" size={28} color="#FFFFFF" />
                   </View>
@@ -301,6 +402,37 @@ export default function PerfilScreen() {
           </View>
         </ScrollView>
       </View>
+
+      <Modal
+        visible={showAvatarMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAvatarMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowAvatarMenu(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Actualizar foto de perfil</Text>
+            
+            <TouchableOpacity style={styles.modalOption} onPress={takePhoto}>
+              <MaterialIcons name="photo-camera" size={24} color="#2563EB" />
+              <Text style={styles.modalOptionText}>Tomar Foto</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalOption} onPress={pickImage}>
+              <MaterialIcons name="photo-library" size={24} color="#2563EB" />
+              <Text style={styles.modalOptionText}>Elegir de Galería</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.modalOption, styles.modalOptionCancel]} onPress={() => setShowAvatarMenu(false)}>
+              <Text style={styles.modalOptionCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -700,5 +832,51 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 14,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 340,
+    padding: 20,
+    gap: 15,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    gap: 12,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  modalOptionCancel: {
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    marginTop: 5,
+  },
+  modalOptionCancelText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#EF4444',
   },
 });
