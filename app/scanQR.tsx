@@ -1,21 +1,21 @@
-import { BarCodeScanner } from "expo-barcode-scanner";
+import {
+  CameraView,
+  useCameraPermissions,
+} from "expo-camera";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button, Platform, StyleSheet, Text, View } from "react-native";
 import { registerAttendance } from "../services/attendanceService";
 import { getUser } from "../services/authService";
 
-let Html5QrcodeScanner: any = null;
-
-if (Platform.OS === "web") {
-  Html5QrcodeScanner = require("html5-qrcode").Html5QrcodeScanner;
-}
-
 export default function ScanQRScreen() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
   const router = useRouter();
   const studentId = getUser()?.id;
+  const handleBarCodeScannedRef = useRef<
+    ((payload: { data: string }) => Promise<void>) | null
+  >(null);
 
   const ReaderDiv =
     Platform.OS === "web"
@@ -35,15 +35,18 @@ export default function ScanQRScreen() {
       : () => null;
 
   useEffect(() => {
-    if (Platform.OS !== "web") {
-      (async () => {
-        const { status } = await BarCodeScanner.requestPermissionsAsync();
-        setHasPermission(status === "granted");
-      })();
-    } else {
-      setHasPermission(true);
+    if (
+      Platform.OS !== "web" &&
+      permission &&
+      !permission.granted &&
+      permission.canAskAgain
+    ) {
+      requestPermission();
     }
-  }, []);
+  }, [permission, requestPermission]);
+
+  const hasPermission =
+    Platform.OS === "web" ? true : permission?.granted ?? null;
 
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     setScanned(true);
@@ -71,46 +74,71 @@ export default function ScanQRScreen() {
     }
   };
 
+  handleBarCodeScannedRef.current = handleBarCodeScanned;
+
   useEffect(() => {
-    if (Platform.OS === "web" && Html5QrcodeScanner) {
-      let scanner: any;
+    if (Platform.OS !== "web") {
+      return;
+    }
 
-      const startScanner = () => {
-        try {
-          if (!document.getElementById("reader")) return;
+    let scanner: any;
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-          scanner = new Html5QrcodeScanner(
-            "reader",
-            { fps: 15, qrbox: { width: 280, height: 280 } },
-            false
-          );
+    const startScanner = async () => {
+      try {
+        const { Html5QrcodeScanner } = await import("html5-qrcode");
 
-          scanner.render(
-            (decodedText: string) => {
-              if (scanner) scanner.clear();
-              handleBarCodeScanned({ data: decodedText });
-            },
-            () => {}
-          );
-        } catch (e) {
-          console.error("Scanner init error", e);
+        if (cancelled || !document.getElementById("reader")) {
+          return;
         }
-      };
 
-      if (!scanned) {
-        setTimeout(startScanner, 200);
+        scanner = new Html5QrcodeScanner(
+          "reader",
+          { fps: 15, qrbox: { width: 280, height: 280 } },
+          false
+        );
+
+        scanner.render(
+          (decodedText: string) => {
+            if (scanner) {
+              void scanner.clear();
+            }
+
+            void handleBarCodeScannedRef.current?.({ data: decodedText });
+          },
+          () => {}
+        );
+      } catch (error) {
+        console.error("Scanner init error", error);
+      }
+    };
+
+    if (!scanned) {
+      timeoutId = setTimeout(() => {
+        try {
+          void startScanner();
+        } catch (error) {
+          console.error("Scanner init error", error);
+        }
+      }, 200);
+    }
+
+    return () => {
+      cancelled = true;
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
 
-      return () => {
-        if (scanner) {
-          try {
-            scanner.clear().catch((e: any) =>
-              console.log("Clear scanner error", e)
-            );
-          } catch (e) {}
-        }
-      };
-    }
+      if (scanner) {
+        try {
+          scanner.clear().catch((error: any) =>
+            console.log("Clear scanner error", error)
+          );
+        } catch {}
+      }
+    };
   }, [scanned]);
 
   if (hasPermission === null) {
@@ -125,6 +153,13 @@ export default function ScanQRScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>No se concedió acceso a la cámara</Text>
+        <View style={styles.nativeProfileButton}>
+          <Button
+            title="Solicitar permiso"
+            onPress={() => requestPermission()}
+            color="#4F46E5"
+          />
+        </View>
         <View style={styles.nativeProfileButton}>
           <Button
             title="Ir a Perfil"
@@ -171,9 +206,11 @@ export default function ScanQRScreen() {
 
   return (
     <View style={styles.container}>
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+      <CameraView
+        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
+        facing="back"
       />
 
       <View style={styles.overlay}>
